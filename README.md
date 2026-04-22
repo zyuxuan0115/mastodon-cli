@@ -1,4 +1,4 @@
-# cmdline-mastodon
+# mastodon-cli
 
 A tiny command-line Mastodon client written in Go. Log in to any Mastodon server, read your timeline, and publish, reply to, or delete posts from the terminal.
 
