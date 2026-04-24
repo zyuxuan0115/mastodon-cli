@@ -11,6 +11,30 @@ import (
 	"strings"
 )
 
+type stringList []string
+
+func (s *stringList) String() string     { return strings.Join(*s, ",") }
+func (s *stringList) Set(v string) error { *s = append(*s, v); return nil }
+
+// parseIntersperse parses flags that may appear before, after, or between
+// positional arguments. Go's flag package stops at the first non-flag token,
+// so we loop: parse, peel off one positional, parse the rest.
+func parseIntersperse(fs *flag.FlagSet, args []string) ([]string, error) {
+	var positional []string
+	for {
+		if err := fs.Parse(args); err != nil {
+			return nil, err
+		}
+		args = fs.Args()
+		if len(args) == 0 {
+			break
+		}
+		positional = append(positional, args[0])
+		args = args[1:]
+	}
+	return positional, nil
+}
+
 func readStatusText(arg string) (string, error) {
 	if arg != "-" {
 		return arg, nil
@@ -99,12 +123,17 @@ func cmdPost(args []string) error {
 	visibility := fs.String("visibility", "", "public|unlisted|private|direct")
 	cw := fs.String("cw", "", "content warning / spoiler text")
 	replyTo := fs.String("reply-to", "", "status ID to reply to")
-	if err := fs.Parse(args); err != nil {
+	var media stringList
+	fs.Var(&media, "media", "path to image to attach (repeat for up to 4)")
+	rest, err := parseIntersperse(fs, args)
+	if err != nil {
 		return err
 	}
-	rest := fs.Args()
 	if len(rest) != 1 {
 		return fmt.Errorf("usage: masto post <text> [flags]  (use - to read from stdin)")
+	}
+	if len(media) > 4 {
+		return fmt.Errorf("at most 4 images allowed, got %d", len(media))
 	}
 	text, err := readStatusText(rest[0])
 	if err != nil {
@@ -115,11 +144,22 @@ func cmdPost(args []string) error {
 	if err != nil {
 		return err
 	}
-	s, err := newClient(cfg.Server, cfg.AccessToken).Post(PostParams{
+	c := newClient(cfg.Server, cfg.AccessToken)
+	var mediaIDs []string
+	for _, p := range media {
+		fmt.Fprintf(os.Stderr, "uploading %s...\n", p)
+		id, err := c.UploadMedia(p)
+		if err != nil {
+			return err
+		}
+		mediaIDs = append(mediaIDs, id)
+	}
+	s, err := c.Post(PostParams{
 		Status:      text,
 		Visibility:  *visibility,
 		SpoilerText: *cw,
 		InReplyToID: *replyTo,
+		MediaIDs:    mediaIDs,
 	})
 	if err != nil {
 		return err

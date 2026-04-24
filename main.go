@@ -9,7 +9,7 @@ const usage = `masto - Mastodon CLI
 
 Usage:
   masto login <server>
-  masto post <text|-> [--visibility public|unlisted|private|direct] [--cw <text>] [--reply-to <id>]
+  masto post <text|-> [--visibility public|unlisted|private|direct] [--cw <text>] [--reply-to <id>] [--media <path>]...
   masto timeline [--kind home|public] [--limit N]
   masto posts [--limit N] [--exclude-replies] [--exclude-reblogs]
   masto reply <status-id> <text|->

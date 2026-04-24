@@ -1,12 +1,17 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
+	"time"
 )
 
 type Client struct {
@@ -47,6 +52,7 @@ type PostParams struct {
 	Visibility  string
 	SpoilerText string
 	InReplyToID string
+	MediaIDs    []string
 }
 
 func (c *Client) do(method, path string, form url.Values, out any) error {
@@ -120,6 +126,9 @@ func (c *Client) Post(p PostParams) (*Status, error) {
 	if p.InReplyToID != "" {
 		form.Set("in_reply_to_id", p.InReplyToID)
 	}
+	for _, id := range p.MediaIDs {
+		form.Add("media_ids[]", id)
+	}
 	var s Status
 	if err := c.do("POST", "/api/v1/statuses", form, &s); err != nil {
 		return nil, err
@@ -171,6 +180,86 @@ func (c *Client) AccountStatuses(accountID string, limit int, excludeReplies, ex
 		return nil, err
 	}
 	return ss, nil
+}
+
+func (c *Client) UploadMedia(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	fw, err := mw.CreateFormFile("file", filepath.Base(path))
+	if err != nil {
+		return "", err
+	}
+	if _, err := io.Copy(fw, f); err != nil {
+		return "", err
+	}
+	if err := mw.Close(); err != nil {
+		return "", err
+	}
+
+	req, err := http.NewRequest("POST", c.Server+"/api/v2/media", &buf)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	if c.Token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.Token)
+	}
+	resp, err := c.HTTP.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode >= 400 {
+		return "", fmt.Errorf("upload %s: %s: %s", filepath.Base(path), resp.Status, strings.TrimSpace(string(body)))
+	}
+	var m struct {
+		ID  string `json:"id"`
+		URL string `json:"url"`
+	}
+	if err := json.Unmarshal(body, &m); err != nil {
+		return "", err
+	}
+	if resp.StatusCode == http.StatusAccepted || m.URL == "" {
+		if err := c.waitForMedia(m.ID); err != nil {
+			return "", err
+		}
+	}
+	return m.ID, nil
+}
+
+func (c *Client) waitForMedia(id string) error {
+	deadline := time.Now().Add(60 * time.Second)
+	for {
+		req, err := http.NewRequest("GET", c.Server+"/api/v1/media/"+id, nil)
+		if err != nil {
+			return err
+		}
+		if c.Token != "" {
+			req.Header.Set("Authorization", "Bearer "+c.Token)
+		}
+		resp, err := c.HTTP.Do(req)
+		if err != nil {
+			return err
+		}
+		resp.Body.Close()
+		if resp.StatusCode == http.StatusOK {
+			return nil
+		}
+		if resp.StatusCode != http.StatusPartialContent && resp.StatusCode >= 400 {
+			return fmt.Errorf("media %s: %s", id, resp.Status)
+		}
+		if time.Now().After(deadline) {
+			return fmt.Errorf("media %s still processing after 60s", id)
+		}
+		time.Sleep(1 * time.Second)
+	}
 }
 
 func (c *Client) VerifyCredentials() (*Account, error) {

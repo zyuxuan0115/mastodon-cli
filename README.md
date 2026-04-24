@@ -32,7 +32,7 @@ Any Mastodon-API-compatible server works (e.g. `mastodon.social`, `hachyderm.io`
 
 ```
 masto login <server>
-masto post <text|-> [--visibility public|unlisted|private|direct] [--cw <text>] [--reply-to <id>]
+masto post <text|-> [--visibility public|unlisted|private|direct] [--cw <text>] [--reply-to <id>] [--media <path>]...
 masto timeline [--kind home|public] [--limit N]
 masto posts [--limit N] [--exclude-replies] [--exclude-reblogs]
 masto reply <status-id> <text|->
@@ -42,6 +42,8 @@ masto help
 ```
 
 Pass `-` as the text argument to `post` or `reply` to read the status body from stdin — useful for multi-line toots.
+
+Flags and the status text can appear in any order (e.g. `masto post "hi" --media a.jpg` and `masto post --media a.jpg "hi"` both work).
 
 ### Examples
 
@@ -55,6 +57,12 @@ Post with a content warning and unlisted visibility:
 
 ```sh
 masto post "spoilers for episode 3" --cw "TV spoilers" --visibility unlisted
+```
+
+Post with up to 4 image attachments (repeat `--media`):
+
+```sh
+masto post "beach day" --media a.jpg --media b.jpg --media c.jpg --media d.jpg
 ```
 
 Post a multi-line toot via stdin (heredoc or pipe):
