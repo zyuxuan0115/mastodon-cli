@@ -66,7 +66,7 @@ func cmdLogin(args []string) error {
 	scopes := "read write"
 
 	c := newClient(server, "")
-	app, err := c.RegisterApp("cmdline-mastodon", scopes, redirect)
+	app, err := c.RegisterApp("masto-cli", scopes, redirect)
 	if err != nil {
 		return fmt.Errorf("register app: %w", err)
 	}

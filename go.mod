@@ -1,3 +1,3 @@
-module cmdline-mastodon
+module masto-cli
 
 go 1.22

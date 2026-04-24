@@ -24,7 +24,7 @@ mv masto /usr/local/bin/
 masto login mastodon.social
 ```
 
-This registers an app on the server, prints an authorization URL, and waits for you to paste back the code shown after authorizing in your browser. The resulting access token is written to `~/.config/cmdline-mastodon/config.json` (mode `0600`).
+This registers an app on the server, prints an authorization URL, and waits for you to paste back the code shown after authorizing in your browser. The resulting access token is written to `~/.config/masto-cli/config.json` (mode `0600`).
 
 Any Mastodon-API-compatible server works (e.g. `mastodon.social`, `hachyderm.io`, your own instance). You can pass a bare hostname or a full URL.
 
@@ -119,7 +119,7 @@ masto whoami
 State lives in a single JSON file:
 
 ```
-~/.config/cmdline-mastodon/config.json
+~/.config/masto-cli/config.json
 ```
 
 It contains the server URL, the app's client ID/secret, and the user access token. To log out, delete the file.

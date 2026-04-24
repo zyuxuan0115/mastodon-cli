@@ -19,7 +19,7 @@ func configPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, ".config", "cmdline-mastodon", "config.json"), nil
+	return filepath.Join(home, ".config", "masto-cli", "config.json"), nil
 }
 
 func loadConfig() (*Config, error) {
