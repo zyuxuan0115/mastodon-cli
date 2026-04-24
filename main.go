@@ -9,11 +9,13 @@ const usage = `masto - Mastodon CLI
 
 Usage:
   masto login <server>
-  masto post <text> [--visibility public|unlisted|private|direct] [--cw <text>] [--reply-to <id>]
+  masto post <text|-> [--visibility public|unlisted|private|direct] [--cw <text>] [--reply-to <id>]
   masto timeline [--kind home|public] [--limit N]
-  masto reply <status-id> <text>
+  masto posts [--limit N] [--exclude-replies] [--exclude-reblogs]
+  masto reply <status-id> <text|->
   masto delete <status-id>
   masto whoami
+  masto help
 `
 
 func main() {
@@ -30,6 +32,8 @@ func main() {
 		err = cmdPost(args)
 	case "timeline":
 		err = cmdTimeline(args)
+	case "posts":
+		err = cmdPosts(args)
 	case "reply":
 		err = cmdReply(args)
 	case "delete":

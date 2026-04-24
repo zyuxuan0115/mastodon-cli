@@ -32,12 +32,16 @@ Any Mastodon-API-compatible server works (e.g. `mastodon.social`, `hachyderm.io`
 
 ```
 masto login <server>
-masto post <text> [--visibility public|unlisted|private|direct] [--cw <text>] [--reply-to <id>]
+masto post <text|-> [--visibility public|unlisted|private|direct] [--cw <text>] [--reply-to <id>]
 masto timeline [--kind home|public] [--limit N]
-masto reply <status-id> <text>
+masto posts [--limit N] [--exclude-replies] [--exclude-reblogs]
+masto reply <status-id> <text|->
 masto delete <status-id>
 masto whoami
+masto help
 ```
+
+Pass `-` as the text argument to `post` or `reply` to read the status body from stdin — useful for multi-line toots.
 
 ### Examples
 
@@ -53,6 +57,19 @@ Post with a content warning and unlisted visibility:
 masto post "spoilers for episode 3" --cw "TV spoilers" --visibility unlisted
 ```
 
+Post a multi-line toot via stdin (heredoc or pipe):
+
+```sh
+masto post - <<EOF
+line one
+line two
+
+final line
+EOF
+
+echo -e "line one\nline two" | masto post -
+```
+
 Read the 10 most recent posts from your home timeline:
 
 ```sh
@@ -63,6 +80,12 @@ Read the public (federated) timeline:
 
 ```sh
 masto timeline --kind public
+```
+
+List your own posts (most recent first), skipping replies and boosts:
+
+```sh
+masto posts --limit 50 --exclude-replies --exclude-reblogs
 ```
 
 Reply to a status (use the ID shown by `timeline`):

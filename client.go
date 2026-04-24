@@ -151,6 +151,28 @@ func (c *Client) Delete(id string) error {
 	return c.do("DELETE", "/api/v1/statuses/"+id, nil, nil)
 }
 
+func (c *Client) AccountStatuses(accountID string, limit int, excludeReplies, excludeReblogs bool) ([]Status, error) {
+	q := url.Values{}
+	if limit > 0 {
+		q.Set("limit", fmt.Sprintf("%d", limit))
+	}
+	if excludeReplies {
+		q.Set("exclude_replies", "true")
+	}
+	if excludeReblogs {
+		q.Set("exclude_reblogs", "true")
+	}
+	path := "/api/v1/accounts/" + accountID + "/statuses"
+	if s := q.Encode(); s != "" {
+		path += "?" + s
+	}
+	var ss []Status
+	if err := c.do("GET", path, nil, &ss); err != nil {
+		return nil, err
+	}
+	return ss, nil
+}
+
 func (c *Client) VerifyCredentials() (*Account, error) {
 	var a Account
 	if err := c.do("GET", "/api/v1/accounts/verify_credentials", nil, &a); err != nil {

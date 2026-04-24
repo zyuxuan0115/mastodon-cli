@@ -4,11 +4,27 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"regexp"
 	"strings"
 )
+
+func readStatusText(arg string) (string, error) {
+	if arg != "-" {
+		return arg, nil
+	}
+	b, err := io.ReadAll(os.Stdin)
+	if err != nil {
+		return "", fmt.Errorf("read stdin: %w", err)
+	}
+	text := strings.TrimRight(string(b), "\n")
+	if text == "" {
+		return "", fmt.Errorf("empty status from stdin")
+	}
+	return text, nil
+}
 
 func normalizeServer(s string) string {
 	if !strings.HasPrefix(s, "http://") && !strings.HasPrefix(s, "https://") {
@@ -88,7 +104,11 @@ func cmdPost(args []string) error {
 	}
 	rest := fs.Args()
 	if len(rest) != 1 {
-		return fmt.Errorf("usage: masto post <text> [flags]")
+		return fmt.Errorf("usage: masto post <text> [flags]  (use - to read from stdin)")
+	}
+	text, err := readStatusText(rest[0])
+	if err != nil {
+		return err
 	}
 
 	cfg, err := loadConfig()
@@ -96,7 +116,7 @@ func cmdPost(args []string) error {
 		return err
 	}
 	s, err := newClient(cfg.Server, cfg.AccessToken).Post(PostParams{
-		Status:      rest[0],
+		Status:      text,
 		Visibility:  *visibility,
 		SpoilerText: *cw,
 		InReplyToID: *replyTo,
@@ -140,16 +160,56 @@ func cmdTimeline(args []string) error {
 	return nil
 }
 
+func cmdPosts(args []string) error {
+	fs := flag.NewFlagSet("posts", flag.ContinueOnError)
+	limit := fs.Int("limit", 20, "number of statuses to fetch")
+	excludeReplies := fs.Bool("exclude-replies", false, "skip replies")
+	excludeReblogs := fs.Bool("exclude-reblogs", false, "skip boosts")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	cfg, err := loadConfig()
+	if err != nil {
+		return err
+	}
+	c := newClient(cfg.Server, cfg.AccessToken)
+	who, err := c.VerifyCredentials()
+	if err != nil {
+		return err
+	}
+	ss, err := c.AccountStatuses(who.ID, *limit, *excludeReplies, *excludeReblogs)
+	if err != nil {
+		return err
+	}
+	for _, s := range ss {
+		fmt.Printf("─── %s  %s  [%s]\n", s.ID, s.CreatedAt, s.Visibility)
+		if s.SpoilerText != "" {
+			fmt.Printf("CW: %s\n", s.SpoilerText)
+		}
+		fmt.Println(stripHTML(s.Content))
+		if s.URL != "" {
+			fmt.Println(s.URL)
+		}
+		fmt.Println()
+	}
+	return nil
+}
+
 func cmdReply(args []string) error {
 	if len(args) != 2 {
-		return fmt.Errorf("usage: masto reply <status-id> <text>")
+		return fmt.Errorf("usage: masto reply <status-id> <text>  (use - to read from stdin)")
+	}
+	text, err := readStatusText(args[1])
+	if err != nil {
+		return err
 	}
 	cfg, err := loadConfig()
 	if err != nil {
 		return err
 	}
 	s, err := newClient(cfg.Server, cfg.AccessToken).Post(PostParams{
-		Status:      args[1],
+		Status:      text,
 		InReplyToID: args[0],
 	})
 	if err != nil {
