@@ -8,14 +8,28 @@ Zero external dependencies — just the Go standard library.
 
 Requires Go 1.22+.
 
+The included `install.sh` builds for the current machine (macOS or Linux, amd64 or arm64) and installs the binary to a directory on your `$PATH` so you can run `masto post …` from anywhere:
+
 ```sh
-go build -o masto .
+./install.sh
 ```
 
-Optionally put the binary on your `$PATH`:
+By default it installs to `/usr/local/bin/masto` (using `sudo` if that directory isn't writable). To install somewhere else:
 
 ```sh
-mv masto /usr/local/bin/
+PREFIX=$HOME/.local ./install.sh   # installs to ~/.local/bin/masto
+```
+
+To build without installing (binary lands in `./dist/`):
+
+```sh
+./install.sh --build-only
+```
+
+Or build manually:
+
+```sh
+go build -o masto .
 ```
 
 ## Login
@@ -135,4 +149,5 @@ main.go        - command dispatch
 commands.go    - subcommand handlers + timeline HTML rendering
 client.go      - Mastodon API client
 config.go      - config load/save
+install.sh     - build + install for current macOS/Linux machine
 ```
